@@ -1,61 +1,66 @@
+# Create a Python script that identifies and collects files (both created and modified) in the last 24 hours from the current directory. Update these files in some way and move them to a folder named "last_24hours."
+
+# Requirements:
+
+# Listing Files:
+# Use the os module to list all files in the current directory.
+# Identification of Files:
+# Implement a function to determine whether a file has been created or modified in the last 24 hours.
+# Consider both the modification time (st_mtime) and creation time (st_ctime) of the file.
+
+# Update Files:
+# Create a function to update the identified files. For example, append a timestamp to the content of each file.
+
+# Create "last_24hours" Folder:
+# Check if a folder named "last_24hours" exists. If not, create it using the os module.
+
+# Move Files:
+# Move the identified and updated files to the "last_24hours" folder using different method
+# Combine the functions to achieve the main objective.
+
+
+
 import os
-import datetime
+import shutil
+from datetime import datetime, timedelta
 
-TARGET_FOLDER = 'last_24hours'
+def list_files(directory="."):
+    return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
 
-def get_files():
-   return os.listdir('.')
-   
-def is_recent(filename):
-   path = os.path.join('.', filename)
-   modification_time = datetime.datetime.fromtimestamp(os.path.getmtime(path))
-   creation_time = datetime.datetime.fromtimestamp(os.path.getctime(path))
-   
-   now = datetime.datetime.now()
-   
-   if (now - modification_time).total_seconds() < 86400 and (now - creation_time).total_seconds() < 86400:
-      return True
-   else:  
-      return False
-def update_file(filename):
-   try:
-      with open(filename, 'a') as f:
-         f.write(f"\nUpdated at: {datetime.datetime.now()}")
-   except PermissionError:    
-      print(f"No access to {filename}, skipping")
-      print(filename)
-def create_folder():
-   if not os.path.exists(TARGET_FOLDER):
-      os.makedirs(TARGET_FOLDER)
-def move_file(filename):
+def is_recently_modified_or_created(file_path):
+    file_stat = os.stat(file_path)
+    
+    time_difference = datetime.now().timestamp() - max(file_stat.st_mtime, file_stat.st_ctime)
+    
+    return time_difference < 24 * 3600
 
-   source = os.path.join('.', filename) # set source path
+def update_files(files):
+    for file in files:
+        file_path = os.path.join(os.getcwd(), file)
+        with open(file_path, 'a') as f:
+            f.write("\nUpdated at: " + str(datetime.now()))
 
-   if not os.path.exists(TARGET_FOLDER):
-      try:
-         os.makedirs(TARGET_FOLDER)  
-      except OSError as e:
-         print(f"Folder creation error: {e}")
-         return
+def create_last_24hours_folder():
+    folder_name = "last_24hours"
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
 
-   destination = os.path.join(TARGET_FOLDER, filename)
-   
-   try:   
-      os.replace(source, destination)
-   except OSError as e:
-      print(f"File move error: {e}")
-if __name__ == '__main__':
+def move_files_to_last_24hours(files):
+    for file in files:
+        file_path = os.path.join(os.getcwd(), file)
+        destination_path = os.path.join(os.getcwd(), "last_24hours", file)
+        shutil.move(file_path, destination_path)
 
-   create_folder()
-   
-   files = get_files()  
-   
-   for file in files:
+def main():
+    files_in_current_directory = list_files()
 
-      if is_recent(file):
-         
-         update_file(file)
-         
-         move_file(file)
-         
-   print("Files processed")
+    recent_files = [file for file in files_in_current_directory if is_recently_modified_or_created(file)]
+
+    create_last_24hours_folder()
+
+    update_files(recent_files)
+
+    move_files_to_last_24hours(recent_files)
+
+if __name__ == "__main__":
+    main()
